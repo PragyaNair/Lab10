@@ -1,78 +1,67 @@
-"""
-Description:
-  Graphical user interface that displays the official artwork for a
-  user-specified Pokemon, which can be set as the desktop background image.
-
-Usage:
-  python poke_image_viewer.py
-"""
 from tkinter import *
 from tkinter import ttk
-import os
-import poke_api
-import image_lib
-import ctypes
-import inspect
+from poke_api import get_pokemon_names, get_pokemon_artwork
+from image_lib import download_image, save_image_file, set_desktop_background_image
 
-# Get the script and images directory
-script_name= inspect.getframeinfo(inspect.currentframe()).filename
-script_dir = os.path.dirname(os.path.abspath(__file__))
-images_dir = os.path.join(script_dir, 'images')
-
-# TODO: Create the images directory if it does not exist
-if not os.path.isdir(images_dir):
-    os.makedirs(images_dir)
 # Create the main window
 root = Tk()
 root.title("Pokemon Viewer")
-root.geometry('600x600')
-root.minsize(500,600)
-root.columnconfigure(0,weight=1)
-root.rowconfigure(0, weight=1)
 
-# TODO: Set the icon
-app_id= 'COMP593.PokeImageViewer'
-ctypes.windll.shell32.SetCurrentProcessExplictAppUserModelID(app_id)
-root.iconbitmap( os.path.join(script_dir, 'poke_ball.ico'))
+# Set the icon (replace 'icon.ico' with your actual icon file)
+icon_path = 'icon.ico'
+root.iconbitmap(icon_path)
 
-# TODO: Create frames
-frm = ttk.Frame(root)
-frm.columnconfigure(0,weight=1)
-frm.rowconfigure(0, weight=1)
-frm.grid(sticky=NSEW)
-# TODO: Populate frames with widgets and define event handler functions
-#Create the button to set the desktop bg 
-def handle_set_desktop():
-    """
-    Event handler called when user clicks "Set as Desktop Image" button.
-    Sets The Desktop bg image to the current Pokemon display image_lib
+# Create frames
+frame1 = ttk.Frame(root)
+frame2 = ttk.Frame(root)
+frame3 = ttk.Frame(root)
 
-    """
-image.lib.set_desktop_background_image(image_path)
+frame1.pack(fill='both', expand=True)
+frame2.pack(fill='both', expand=True)
+frame3.pack(fill='both', expand=True)
 
-btn_set_desktop = ttk.Button(frm, text='Set as Desktop Image' , command=handle_set_desktop)
-btn_set_desktop.state('Disabled')
-btn_set_desktop.grid(row=1,column=0,padx=0,pady=(10,20))
-#create list to pull down pokemon names
-pokemon_list = poke_api.get_pokemon_names()
-pokemon_list.sort()
-cbox_poke_sel = ttk.Combobox(frm, value=pokemon_list, state = 'readonly')
-cbox_poke_sel.set("Select a pokemon")
-cbox_poke_sel.grid(row=1,column=0, padx=0, pady=10)
+# Create a Combobox with a list of Pokemon names
+pokemon_names = get_pokemon_names()
+selected_pokemon = StringVar()
+pokemon_combobox = ttk.Combobox(frame1, textvariable=selected_pokemon, values=pokemon_names)
+pokemon_combobox.set("Select a Pokemon")
+pokemon_combobox.pack(side='left', padx=10, pady=10)
 
-def handle_poke_sel(event):
-    global image_path
+# Create a Label to display the Pokemon artwork
+pokemon_artwork = PhotoImage()  # Placeholder for the image
+artwork_label = ttk.Label(frame1, image=pokemon_artwork)
+artwork_label.pack(side='left', padx=10, pady=10)
 
-    current_sel=cbox_poke_sel.get()
-    image_path=poke_api.download_pokemon_artwork(current_sel, images_dir )
-    if image_path:
-        lbl_image['text'] = None
-        photo['file'] = image_path 
-        #
-        #
-        else
-        #
-        #
-#populate frames with widgets and define event handler functions. 
+# Create a Button to set the desktop background image
+def set_desktop_image():
+    selected_name = selected_pokemon.get()
+    if selected_name:
+        image_data = get_pokemon_artwork(selected_name)
+        if image_data:
+            image_path = f'images/{selected_name}.png'
+            save_image_file(image_data, image_path)
+            set_desktop_background_image(image_path)
+
+set_button = ttk.Button(frame2, text="Set as Desktop Image", command=set_desktop_image)
+set_button.pack(side='bottom', padx=10, pady=10)
+
+# Event handler for Combobox selection
+def on_combobox_select(event):
+    selected_name = selected_pokemon.get()
+    if selected_name:
+        image_data = get_pokemon_artwork(selected_name)
+        if image_data:
+            image_path = f'images/{selected_name}.png'
+            save_image_file(image_data, image_path)
+            artwork = PhotoImage(file=image_path)
+            artwork_label.config(image=artwork)
+            artwork_label.image = artwork  # Keep a reference to prevent garbage collection
+            set_button.config(state='normal')
+        else:
+            set_button.config(state='disabled')
+    else:
+        set_button.config(state='disabled')
+
+pokemon_combobox.bind("<<ComboboxSelected>>", on_combobox_select)
 
 root.mainloop()
